@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.turbo/
+.env
+.env.*
+coverage/
+testcontainers/
+*.log
+.DS_Store
+*.tsbuildinfo

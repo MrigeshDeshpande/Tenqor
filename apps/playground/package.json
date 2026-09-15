@@ -1,0 +1,14 @@
+{
+  "name": "@tenqor/playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "echo 'no build configured'",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no linter configured'",
+    "test": "echo 'no tests configured'"
+  },
+  "devDependencies": {}
+}
