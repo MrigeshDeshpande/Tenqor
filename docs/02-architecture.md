@@ -1,4 +1,4 @@
-# 02 — Architecture
+# 02: Architecture
 
 The initial architecture, its layers, dependency direction, and the boundary the later phases will require.
 
@@ -28,12 +28,12 @@ Rules:
 
 1. **Dependency direction is downward only.** The domain layer must never import the persistence layer, the application layer must never import a concrete store, and nothing outside `packages/postgres` may import `pg` or Drizzle.
 2. **`packages/core` has no runtime dependencies.** It depends only on TypeScript's standard library plus its own declared abstractions.
-3. Every store-specific behavior of consequence — transaction isolation, locking, unique constraints, partial indexes — must be reached through an interface whose contract states the required semantics in terms the domain can reason about.
+3. Every store-specific behavior of consequence (transaction isolation, locking, unique constraints, partial indexes) must be reached through an interface whose contract states the required semantics in terms the domain can reason about.
 4. The connect of the core to a store is **dependency injection at the boundary**: the application layer is handed a `Store` implementation. It never constructs one.
 
 ## 2. Domain layer
 
-Holds concepts from [00 — Constitution §6]: `Tenant`, `LifecycleState`, `Operation`, `Transition`, `Version`, plus the rules around them.
+Holds concepts from [00: Constitution §6]: `Tenant`, `LifecycleState`, `Operation`, `Transition`, `Version`, plus the rules around them.
 
 Responsibilities:
 
@@ -58,8 +58,8 @@ Holds the use cases the engine exposes to a host application, e.g.:
 Responsibilities:
 
 - accept commands with idempotency keys
-- decide replay vs. new execution (idempotency semantics — [03 §5])
-- execute the transition atomically through the version-guarded store operation (concurrency semantics — [03 §6])
+- decide replay vs. new execution (idempotency semantics, see [03 §5])
+- execute the transition atomically through the version-guarded store operation (concurrency semantics, see [03 §6])
 - resolve a command whose outcome is commit-result-ambiguous by replay through the idempotency key
 - classify and record outcomes and failures
 - distinguish **domain rejections** (durable recorded results) from **transaction/infrastructure failures** (rolled back, nothing recorded)
@@ -72,12 +72,12 @@ The core depends on interfaces that state required semantics, not on a database.
 
 | Capability | Semantic required | Why |
 | --- | --- | --- |
-| Atomic transition transaction | Either the whole transition commits or none of it does; a deterministic rejection — including a CAS version conflict — is durably recorded as a *committed* result without changing tenant state (CAS=0 is never a blanket rollback) | crash safety, no partial transitions, observable rejections |
+| Atomic transition transaction | Either the whole transition commits or none of it does; a deterministic rejection (including a CAS version conflict) is durably recorded as a *committed* result without changing tenant state (CAS=0 is never a blanket rollback) | crash safety, no partial transitions, observable rejections |
 | Compare-and-swap on tenant version | A state transition must fail (not silently succeed) if the version it observed is stale | optimistic concurrency, no lost updates, transition serialization |
 | Durable operation records | Operations and their outcomes (including rejections) persist; lookup by operation id per tenant | idempotency replay, audit, future takeover |
 | Append-only operation history | History entries are never mutated | audit, "what happened, exactly?" |
 
-The abstraction must be honest about the boundary between Phase 1 and later phases (§6). **Phase 1 does not expose worker claims, leases, heartbeats, or takeover through the persistence port** — Phase 1 has no out-of-transaction work and therefore no worker ownership. Phase 3 introduces the worker-execution persistence contract (durable claim, lease, takeover) when there is a real reason for it.
+The abstraction must be honest about the boundary between Phase 1 and later phases (§6). **Phase 1 does not expose worker claims, leases, heartbeats, or takeover through the persistence port**. Phase 1 has no out-of-transaction work and therefore no worker ownership. Phase 3 introduces the worker-execution persistence contract (durable claim, lease, takeover) when there is a real reason for it.
 
 **OPEN DECISION:** the exact shape of the storage interface (single read-modify-write operation vs. composed primitives; how tx boundaries and the rejection path are expressed). Constraint: the interface must not *force* a future Phase 3 implementation to hold a transaction open across external I/O (§6), it must not expose Phase 1 to the worker-claim semantics that Phase 3 will add, and it must express the CAS-rejection path (CAS=0 → committed durable rejection, or idempotent replay) **distinctly** from infrastructure rollback ([03 §8.1], [04 §2]).
 
@@ -95,7 +95,7 @@ Scope in Phase 1:
 
 The schema is exactly what the abstraction requires; there is no schema for features not yet in scope.
 
-## 6. The two transaction models — and the seam between them
+## 6. The two transaction models, and the seam between them
 
 Phase 1 and later phases require **different transaction models**. The architecture must not blur them.
 

@@ -1,4 +1,4 @@
-# 04 — Engineering Rules
+# 04: Engineering Rules
 
 Rules that govern every line of Tenqor code, every test, and every review. Each rule states its rationale and how it is verified.
 
@@ -14,7 +14,7 @@ Rules that govern every line of Tenqor code, every test, and every review. Each 
 
 ## 2. Explicit failure semantics
 
-**Rule.** Every operation can fail, and failure is an explicit, classified outcome — never an exception swallowed, never a silent empty retry, never a catch-all `catch {}`.
+**Rule.** Every operation can fail, and failure is an explicit, classified outcome: never an exception swallowed, never a silent empty retry, never a catch-all `catch {}`.
 
 **Rationale.** Unclassified failures make ambiguous outcomes unrecognizable.
 
@@ -70,7 +70,7 @@ Rules that govern every line of Tenqor code, every test, and every review. Each 
 
 ## 9. Every important invariant must be documented
 
-**Rule.** Invariants named in the docs (Phase 1: version CAS, replay, durable rejection, terminal-finality, append-only history — per-tenant exclusivity is a Phase 3 invariant, not a Phase 1 one) are documented *where they are enforced* — next to the enforcement, in a comment tied to the doc section. Docs are the source of truth; comments point back to them.
+**Rule.** Invariants named in the docs (Phase 1: version CAS, replay, durable rejection, terminal-finality, append-only history; per-tenant exclusivity is a Phase 3 invariant, not a Phase 1 one) are documented *where they are enforced*, next to the enforcement, in a comment tied to the doc section. Docs are the source of truth; comments point back to them.
 
 **Rationale.** An invariant that survives only in a head is lost.
 

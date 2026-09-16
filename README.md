@@ -6,14 +6,14 @@ Open-source, embeddable engine for reliable lifecycle management of resources be
 
 ## The Problem
 
-Multi-tenant applications manage resources — database schemas, storage buckets, indexes, workloads — that must be provisioned, suspended, resumed, and eventually removed. Each step exists in two worlds at once: the application's record of what should be true, and the external system's actual state. These diverge whenever anything fails — and the failure modes are not exotic; they are normal:
+Multi-tenant applications manage resources (database schemas, storage buckets, indexes, workloads) that must be provisioned, suspended, resumed, and eventually removed. Each step exists in two worlds at once: the application's record of what should be true, and the external system's actual state. These diverge whenever anything fails, and the failure modes are not exotic; they are normal:
 
-- **Partial failure** — a multi-step provisioning run where half the steps succeed and the rest do not
-- **Retries** — every retry is a duplicate command that must not double-apply
-- **Concurrency** — two workers operating on the same tenant at the same time
-- **Crashes** — a process dies mid-operation, leaving the outcome unknown
-- **Ambiguous outcomes** — a timeout whose external effect may actually have succeeded
-- **State drift** — observed state drifting from what the system expects
+- **Partial failure**: a multi-step provisioning run where half the steps succeed and the rest do not
+- **Retries**: every retry is a duplicate command that must not double-apply
+- **Concurrency**: two workers operating on the same tenant at the same time
+- **Crashes**: a process dies mid-operation, leaving the outcome unknown
+- **Ambiguous outcomes**: a timeout whose external effect may actually have succeeded
+- **State drift**: observed state drifting from what the system expects
 
 ---
 
@@ -21,18 +21,18 @@ Multi-tenant applications manage resources — database schemas, storage buckets
 
 Tenqor provides a durable lifecycle engine that:
 
-- **Models lifecycle explicitly** — a tenant is a versioned state machine, not scattered flags
-- **Persists state transitions** — a committed transition is never lost, even if the process that made it dies
-- **Makes operations idempotent** — re-delivering a command never re-applies its effects
-- **Handles concurrency deterministically** — concurrent transitions against the same tenant are resolved through optimistic version checks; stale attempts are durably rejected
-- **Keeps durable history** — every committed outcome is recorded, including rejected commands
-- **Reconciles desired vs observed state** — being built toward this in later phases; Phase 1 is the durable lifecycle foundation
+- **Models lifecycle explicitly**: a tenant is a versioned state machine, not scattered flags
+- **Persists state transitions**: a committed transition is never lost, even if the process that made it dies
+- **Makes operations idempotent**: re-delivering a command never re-applies its effects
+- **Handles concurrency deterministically**: concurrent transitions against the same tenant are resolved through optimistic version checks; stale attempts are durably rejected
+- **Keeps durable history**: every committed outcome is recorded, including rejected commands
+- **Reconciles desired vs observed state**: being built toward this in later phases; Phase 1 is the durable lifecycle foundation
 
 ---
 
 ## Why Tenqor?
 
-Existing tools solve workflow execution, infrastructure provisioning, or individual platform concerns. Tenqor focuses on the gap between them: an application-grade, durable state machine for tenant lifecycle with idempotency, concurrency control, and crash safety — embedded inside the application's own stack.
+Existing tools solve workflow execution, infrastructure provisioning, or individual platform concerns. Tenqor focuses on the gap between them: an application-grade, durable state machine for tenant lifecycle with idempotency, concurrency control, and crash safety, embedded inside the application's own stack.
 
 ---
 
@@ -40,17 +40,17 @@ Existing tools solve workflow execution, infrastructure provisioning, or individ
 
 - **Documentation contract frozen:** `00`–`04`, architecture reviewed
 - **Phase 1 (Durable Tenant State Machine):** specification complete; implementation not yet started
-- **Later phases** (resource execution, desired-state reconciliation, drift detection and repair) are designed by phase boundary only — nothing is advertised that the repository does not yet have
+- **Later phases** (resource execution, desired-state reconciliation, drift detection and repair) are designed by phase boundary only; nothing is advertised that the repository does not yet have
 
 ---
 
 ## Documentation
 
-- [00 — Project Constitution](docs/00-project-constitution.md)
-- [01 — Problem and Scope](docs/01-problem-and-scope.md)
-- [02 — Architecture](docs/02-architecture.md)
-- [03 — Phase 1 Specification](docs/03-phase-1-spec.md)
-- [04 — Engineering Rules](docs/04-engineering-rules.md)
+- [00: Project Constitution](docs/00-project-constitution.md)
+- [01: Problem and Scope](docs/01-problem-and-scope.md)
+- [02: Architecture](docs/02-architecture.md)
+- [03: Phase 1 Specification](docs/03-phase-1-spec.md)
+- [04: Engineering Rules](docs/04-engineering-rules.md)
 
 ---
 
@@ -138,10 +138,10 @@ A good PR should make it easy to answer:
 * How is the behavior tested?
 * Does it introduce any new dependency or architectural responsibility?
 
-Contributors are encouraged to challenge assumptions, find failure cases, and improve the design. The goal is not simply to add code — it is to build reliable lifecycle infrastructure that remains understandable as Tenqor grows.
+Contributors are encouraged to challenge assumptions, find failure cases, and improve the design. The goal is not simply to add code. It is to build reliable lifecycle infrastructure that remains understandable as Tenqor grows.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT: see [LICENSE](LICENSE).

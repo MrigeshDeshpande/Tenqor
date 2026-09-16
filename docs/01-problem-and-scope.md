@@ -1,4 +1,4 @@
-# 01 — Problem and Scope
+# 01: Problem and Scope
 
 This document explains the real problem Tenqor solves, why existing infrastructure does not fully solve it, and precisely what Tenqor does and does not claim.
 
@@ -32,7 +32,7 @@ Systems retry. HTTP clients retry on timeout. Queue consumers retry on failure. 
 
 ### 2.3 Concurrency
 
-The moment more than one worker exists, two workers can operate on the same tenant at the same time — one suspending while another provisions, one deleting while another resumes. Without a per-tenant control mechanism, these operations interleave unpredictably.
+The moment more than one worker exists, two workers can operate on the same tenant at the same time, one suspending while another provisions, one deleting while another resumes. Without a per-tenant control mechanism, these operations interleave unpredictably.
 
 ### 2.4 Ambiguous outcomes
 
@@ -44,11 +44,11 @@ A worker is suspended, killed, or the process restarts between "I started the ex
 
 ### 2.6 Stale workers
 
-A worker dies while holding an operation. Its lock/heartbeat is caducous. A new worker must detect that the previous worker is gone and take over — otherwise the tenant is stuck in an in-progress state forever (or worse, two workers both believe they own the operation).
+A worker dies while holding an operation. Its lock/heartbeat is caducous. A new worker must detect that the previous worker is gone and take over. Otherwise, the tenant is stuck in an in-progress state forever (or worse, two workers both believe they own the operation).
 
 ### 2.7 Desired vs observed state
 
-The application records the state it *wants* (desired state). The actual system drifts: a manual change, a failed job, an orphaned resource. Eventually the observed state diverges from the desired state. Reconciliation — the loop that detects and corrects divergence — is the only defense against drift being permanent.
+The application records the state it *wants* (desired state). The actual system drifts: a manual change, a failed job, an orphaned resource. Eventually the observed state diverges from the desired state. Reconciliation, the loop that detects and corrects divergence, is the only defense against drift being permanent.
 
 ## 3. Why existing infrastructure does not solve this problem
 
@@ -75,14 +75,14 @@ The gap: **an application-grade, durable state machine for tenant lifecycle, wit
 
 "Reliably" means: after any number of the failures in §2, an operator inspecting the store can always answer two questions without guessing:
 
-1. What is the current lifecycle state of this tenant? — **Always exact.**
-2. For every command that commits, is its outcome recorded, including the outcome of rejected commands? — **Always recorded.**
+1. What is the current lifecycle state of this tenant? **Always exact.**
+2. For every command that commits, is its outcome recorded, including the outcome of rejected commands? **Always recorded.**
 
 ## 5. Concrete examples from different domains
 
 The same structural problem appears in every domain. The nouns change; the failure modes do not.
 
-- **B2B SaaS:** on workspace creation, provision a database schema, an Elasticsearch index, and a storage bucket. On cancellation, deprovision all three, but only after billing confirms the final invoice. Suspend a workspace whose payment failed — then resume it if payment succeeds.
+- **B2B SaaS:** on workspace creation, provision a database schema, an Elasticsearch index, and a storage bucket. On cancellation, deprovision all three, but only after billing confirms the final invoice. Suspend a workspace whose payment failed, then resume it if payment succeeds.
 - **EdTech:** a school deploys a dedicated backend namespace and an ingestion queue per school year. At year end, rotate and archive. A crash mid-archive leaves the school in "archiving" forever without a stale-worker mechanism.
 - **FinTech:** a merchant's settlement account must be actively suspended before writes are blocked, then recreated precisely, in order, before read-only access is restored. Inconsistent state here is not a cosmetic bug.
 - **Healthcare:** a clinic creates a compliance boundary, a data store, and a set of audit hooks per site. Hoops on failure: partial provisioning must be visible and repairable, never silently half-done.
@@ -100,7 +100,7 @@ Every case reduces to: *durable lifecycle state per tenant, idempotent transitio
 - infrastructure provisioning at infrastructure scale (why: that is Terraform's domain)
 - generic scheduling, generic message delivery, generic retry layers
 - platform-wide observability, alerting, or incidents
-- any business-domain logic (billing, auth, permissions — these are external)
+- any business-domain logic (billing, auth, permissions, which are external)
 
 Tenqor will not work correctly if these are pushed into it. Out-of-scope concerns belong outside the engine, reachable only through adapters in later phases.
 

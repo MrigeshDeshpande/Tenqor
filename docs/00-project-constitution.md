@@ -1,6 +1,6 @@
-# 00 — Project Constitution
+# 00: Project Constitution
 
-**Tenqor** — open-source, embeddable engine for reliable lifecycle management of resources belonging to multi-tenant applications.
+**Tenqor** is an open-source, embeddable engine for reliable lifecycle management of resources belonging to multi-tenant applications.
 
 Status: proposal. This document is the highest-level contract of the project. It changes only with explicit agreement.
 
@@ -17,7 +17,7 @@ An application adopts Tenqor when it has resources that must be:
 - resumed,
 - deleted,
 
-in a way that survives retries, crashes, concurrency, and ambiguous outcomes — without the application re-implementing distributed-systems machinery for each tenant operation.
+in a way that survives retries, crashes, concurrency, and ambiguous outcomes, without the application re-implementing distributed-systems machinery for each tenant operation.
 
 Tenqor is **domain-independent**. It understands only infrastructure-level concepts. It contains no business-domain concepts.
 
@@ -47,14 +47,14 @@ Tenqor is not primarily about CRUD. The central engineering question is:
 
 Tenqor's model is a **durable, versioned state machine** persisted in a transactional store. State transitions are:
 
-- **durable** — a committed transition is never lost, even if the process that made it dies;
-- **idempotent** — re-delivering a command does not re-apply effects;
-- **serialized** — concurrent transition attempts for a tenant are serialized by the store; exactly one commits, the rest are rejected;
-- **versioned** — a transition is only applied against the state the caller actually observed.
+- **durable**: a committed transition is never lost, even if the process that made it dies;
+- **idempotent**: re-delivering a command does not re-apply effects;
+- **serialized**: concurrent transition attempts for a tenant are serialized by the store; exactly one commits, the rest are rejected;
+- **versioned**: a transition is only applied against the state the caller actually observed.
 
 The database is the source of truth. In-memory state is a cache, never an authority.
 
-### 3.1 Two-tier model — avoid a false reading of "converge"
+### 3.1 Two-tier model: avoid a false reading of "converge"
 
 The product goal (Section 2) is long-term. It distinguishes two very different things:
 
@@ -62,7 +62,7 @@ The product goal (Section 2) is long-term. It distinguishes two very different t
 
 > **Phase 1:** explicit lifecycle commands → durable, transactional state transitions.
 
-Phase 1 is a **transactional command processor for tenant lifecycle state** — not a worker system and not a reconciliation engine. It has no desired state, no observed state, no scheduling, no claims or leases. It executes a command durably and records the outcome. The "converge" language must never be read as license to build any reconciliation machinery during Phase 1.
+Phase 1 is a **transactional command processor for tenant lifecycle state**, not a worker system and not a reconciliation engine. It has no desired state, no observed state, no scheduling, no claims or leases. It executes a command durably and records the outcome. The "converge" language must never be read as license to build any reconciliation machinery during Phase 1.
 
 ## 4. Scope
 
@@ -75,7 +75,7 @@ In scope (eventually, across phases):
 - desired-state reconciliation
 - drift detection and repair
 
-Phase-by-phase scope is defined in [03 — Phase 1 Specification](03-phase-1-spec.md) and the phase boundary rules in §8.
+Phase-by-phase scope is defined in [03: Phase 1 Specification](03-phase-1-spec.md) and the phase boundary rules in §8.
 
 ## 5. Non-goals
 
@@ -97,7 +97,7 @@ Phase-by-phase scope is defined in [03 — Phase 1 Specification](03-phase-1-spe
 
 Tenqor may integrate with these systems through adapters in later phases. It does not attempt to replace them.
 
-Tenqor does not own: authentication, authorization, billing, databases, storage, search, or external services. Business entities — students, patients, invoices, courses, payments, doctors, employees, subscriptions — are **never** part of the core model. They may be represented only inside resource adapters, never inside Tenqor's core concepts.
+Tenqor does not own: authentication, authorization, billing, databases, storage, search, or external services. Business entities (students, patients, invoices, courses, payments, doctors, employees, subscriptions) are **never** part of the core model. They may be represented only inside resource adapters, never inside Tenqor's core concepts.
 
 Tenqor does not claim to solve:
 - general workflow orchestration
