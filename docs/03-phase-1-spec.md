@@ -1,10 +1,10 @@
-# 03 — Phase 1 Specification
+# 03: Phase 1 Specification
 
 **Durable Tenant State Machine**
 
 This is the contract for Phase 1. Every semantic here must be implementable as written or explicitly marked `OPEN DECISION`. Phase 1 code may not be written until this document is reviewed and the `OPEN DECISION`s are resolved.
 
-> **Phase 1 is not a worker system.** Phase 1 has no out-of-transaction work — because every effect is transactional, there is nothing for any worker to own, claim, lease, or take over. Reconcile this section against [02 §6]: the durable-operation model the docs describe is the *Phase 3* seam, not a Phase 1 mechanism.
+> **Phase 1 is not a worker system.** Phase 1 has no out-of-transaction work: because every effect is transactional, there is nothing for any worker to own, claim, lease, or take over. Reconcile this section against [02 §6]: the durable-operation model the docs describe is the *Phase 3* seam, not a Phase 1 mechanism.
 
 ---
 
@@ -61,7 +61,7 @@ Semantics:
 
 ### 2.2 LifecycleState
 
-Phase 1 lifecycle states are **steady states only** — stable, externally observable, no work in flight. Every Phase 1 transition is one atomic database transaction ([§8]), so there is no durable "in progress" moment that any other process can observe, and therefore no durable in-flight state.
+Phase 1 lifecycle states are **steady states only**, stable, externally observable, with no work in flight. Every Phase 1 transition is one atomic database transaction ([§8]), so there is no durable "in progress" moment that any other process can observe, and therefore no durable in-flight state.
 
 The in-flight states of the eventual model (`PROVISIONING`, `SUSPENDING`, `RESUMING`, `DELETING`) belong to the **Phase 3 execution model**, where a worker performs real out-of-transaction work on resources. They are documented as a seam in [02 §6], **not** as Phase 1 states.
 
@@ -76,12 +76,12 @@ The in-flight states of the eventual model (`PROVISIONING`, `SUSPENDING`, `RESUM
 
 `PROVISIONING`, `SUSPENDING`, `RESUMING`, and `DELETING` are **not** Phase 1 states; they are deferred to the Phase 3 execution model, where real out-of-transaction work makes durable in-flight states meaningful ([02 §6]).
 
-**`OPEN DECISION`: whether a `FAILED`/error terminal or error sub-state is needed** (constraint: an operator must always be able to distinguish "transition refused because it was illegal" from "transition failed for a different reason", and both must be durable — see §7, §9).
+**`OPEN DECISION`: whether a `FAILED`/error terminal or error sub-state is needed** (constraint: an operator must always be able to distinguish "transition refused because it was illegal" from "transition failed for a different reason", and both must be durable, per §7, §9).
 
 **`OPEN DECISION`:** the full state set. Constraints any final set must satisfy:
 
 - every steady state must be reachable from the entry state;
-- Phase 1 has **no in-flight states** — durability of in-progress work is a Phase 3 concern and its states enter the model then, with an architecture review;
+- Phase 1 has **no in-flight states**: durability of in-progress work is a Phase 3 concern and its states enter the model then, with an architecture review;
 - deletion must be possible from every non-terminal state;
 - there must be no valid transition whose meaning is ambiguous to an external reviewer;
 - no state may be added or removed after Phase 1 implementation starts without an architecture review.
@@ -134,7 +134,7 @@ Operation {
 
 `OperationType` is the **user-level intent**. In Phase 1 one operation maps to one atomic transition. In later phases one operation may require several internal steps; the domain model must not pretend that will not happen.
 
-Phase 1 carries no `attempt`, no `startedAt`, and no in-flight status: an operation row exists only with a **committed outcome** — `SUCCEEDED` (transition applied) or `FAILED` (deterministic rejection). Attempts, `startedAt`, and in-flight statuses re-enter the model in Phase 3 with durable worker execution ([02 §6]).
+Phase 1 carries no `attempt`, no `startedAt`, and no in-flight status: an operation row exists only with a **committed outcome**: `SUCCEEDED` (transition applied) or `FAILED` (deterministic rejection). Attempts, `startedAt`, and in-flight statuses re-enter the model in Phase 3 with durable worker execution ([02 §6]).
 
 ### 3.2 OperationStatus
 
@@ -145,7 +145,7 @@ Phase 1 has exactly two operation statuses:
 | `SUCCEEDED` | transition committed, result recorded |
 | `FAILED` | transition durably refused (deterministic rejection), classified |
 
-A durable `FAILED` row arises **only** from a deterministic domain rejection (invalid edge, terminal state, version conflict). A transient/infrastructure failure leaves **no row at all** — the transaction rolls back and nothing is recorded (§7, §8).
+A durable `FAILED` row arises **only** from a deterministic domain rejection (invalid edge, terminal state, version conflict). A transient/infrastructure failure leaves **no row at all**: the transaction rolls back and nothing is recorded (§7, §8).
 
 `PROPOSED`, `PENDING`, and `RUNNING` are **not** Phase 1 statuses. Phase 1 has no durable in-flight moment to express ([02 §6]); those statuses arrive with Phase 3 worker execution. Permanent-vs-transient is carried by the `Failure` classification (§7), not by a status.
 
@@ -153,7 +153,7 @@ A durable `FAILED` row arises **only** from a deterministic domain rejection (in
 
 ### 3.3 Operation history
 
-Every **committed outcome** — a transition or a deterministic rejection — is appended to an append-only history for the tenant/operation pair. There is no mutation of history; corrections add new entries. A rolled-back transient/infrastructure failure records no history entry, because the transaction recorded nothing (§8). `OPEN DECISION`: whether history is one row per transition event or one row per lifecycle change; retention policy.
+Every **committed outcome** (a transition or a deterministic rejection) is appended to an append-only history for the tenant/operation pair. There is no mutation of history; corrections add new entries. A rolled-back transient/infrastructure failure records no history entry, because the transaction recorded nothing (§8). `OPEN DECISION`: whether history is one row per transition event or one row per lifecycle change; retention policy.
 
 ---
 
@@ -173,7 +173,7 @@ Phase 1 host-facing commands (no HTTP; a programmatic API):
 ### 5.1 Claims
 
 - Every `transition` call carries an `OperationId` (idempotency key).
-- Uniqueness of `OperationId` is guaranteed **per tenant** by the database: `PRIMARY KEY (tenant_id, operation_id)` (§9.1). This is what makes a duplicate command for the same tenant detectable. The **same `OperationId` under different tenants is independent state** — enforced by the composite key, which is exactly the cross-tenant independence in criterion #12 / probe #14. Per-tenant exclusivity of *in-flight operations* is **not** a Phase 1 requirement — there is no durable in-flight work to be exclusive over ([02 §4], [02 §6]). **Phase 3 reintroduces per-tenant in-flight exclusivity as a real store constraint when out-of-transaction work exists.**
+- Uniqueness of `OperationId` is guaranteed **per tenant** by the database: `PRIMARY KEY (tenant_id, operation_id)` (§9.1). This is what makes a duplicate command for the same tenant detectable. The **same `OperationId` under different tenants is independent state**, enforced by the composite key, which is exactly the cross-tenant independence in criterion #12 / probe #14. Per-tenant exclusivity of *in-flight operations* is **not** a Phase 1 requirement; there is no durable in-flight work to be exclusive over ([02 §4], [02 §6]). **Phase 3 reintroduces per-tenant in-flight exclusivity as a real store constraint when out-of-transaction work exists.**
 - On receiving a `transition`, the engine looks up the operation by `(tenant_id, operation_id)`:
 
 | Existing operation | Behavior |
@@ -182,7 +182,7 @@ Phase 1 host-facing commands (no HTTP; a programmatic API):
 | `SUCCEEDED` | **replay**: return the recorded success and outcome; no state change, no re-run. |
 | `FAILED` | return the recorded rejection; no re-run. A `FAILED` row is always a deterministic rejection in Phase 1. |
 
-There is no `FAILED (transient)` row: a transient/infrastructure failure rolls back and records **nothing** (§7, §8), so a retry after such a failure is simply a fresh command with the same `OperationId` — the idempotency path then applies normally once a committed result exists (§7.4).
+There is no `FAILED (transient)` row: a transient/infrastructure failure rolls back and records **nothing** (§7, §8), so a retry after such a failure is simply a fresh command with the same `OperationId`; the idempotency path then applies normally once a committed result exists (§7.4).
 
 ### 5.2 Replay guarantee
 
@@ -214,7 +214,7 @@ Phase 1 uses **optimistic concurrency only**:
 
 - **`OPEN DECISION`: whether any additional mechanism (locking, `SERIALIZABLE`) is needed in Phase 1.** Constraint: zero lost updates, zero loss of a transition, serialization of concurrent transition attempts is achievable via the CAS + transaction with PostgreSQL's default isolation (extended). If `SERIALIZABLE` or `SELECT ... FOR UPDATE` is required to pass the acceptance criteria, it becomes required; otherwise the CAS + tx alone is the Phase 1 model ([02 §8]).
 
-This is a **single-mechanism concurrency model** — the CAS is trusted alone, not layered with claims or leases (which do not exist in Phase 1). This is deliberately simpler than the earlier draft.
+This is a **single-mechanism concurrency model**: the CAS is trusted alone, not layered with claims or leases (which do not exist in Phase 1). This is deliberately simpler than the earlier draft.
 
 **Why no operation-claim exclusivity in Phase 1:** there is no durable instant where a tenant has an in-flight operation that another process can observe. With no out-of-transaction work, an "exclusive in-flight operation" has nothing to protect, so the matching store constraint is not part of Phase 1 ([02 §4]). In Phase 3, durable per-tenant exclusivity is a real store constraint, and the port grows to express it ([02 §6]).
 
@@ -228,19 +228,19 @@ Every non-success is classified ([04 §2]):
 
 | Class | Meaning | Handling |
 | --- | --- | --- |
-| **deterministic (permanent)** | the transition is invalid (disallowed edge, terminal state), or the observed version is stale — the *domain* rejects it | recorded `FAILED`, no retry, surfaced to caller. **The tenant state is unchanged and the rejection is durably recorded** (§8). |
-| **transient** | infrastructure/timing: DB connection lost, serialization failure, infra-caused constraint error | **nothing is durably recorded** — the transaction rolls back; retry is a fresh command with the same `OperationId` (retry policy — `OPEN DECISION`, §7.4) |
+| **deterministic (permanent)** | the transition is invalid (disallowed edge, terminal state), or the observed version is stale; the *domain* rejects it | recorded `FAILED`, no retry, surfaced to caller. **The tenant state is unchanged and the rejection is durably recorded** (§8). |
+| **transient** | infrastructure/timing: DB connection lost, serialization failure, infra-caused constraint error | **nothing is durably recorded**: the transaction rolls back; retry is a fresh command with the same `OperationId` (retry policy; `OPEN DECISION`, §7.4) |
 | **ambiguous outcome** | the caller cannot tell whether the transaction committed (timeout between send and receipt of the result) | resolved through idempotent replay ([§5], failure probe #7). This is **commit-result ambiguity**, not external-outcome ambiguity ([02 §6]). |
 
 The distinction between a **domain rejection** and a **transaction/infrastructure failure** is explicit and sharpened ([02 §3]):
 
-- **Deterministic domain rejection** (invalid transition, terminal-state command, version conflict): a *result*, not a failure. It commits durably (§8) and records a `FAILED` operation + history — the tenant is unchanged, the rejection is observable and replayable.
-- **Transaction/infrastructure failure** (connection lost, serialization failure, infra-caused constraint error): *not* a durable outcome — the transaction rolls back, nothing is recorded ([04 §8]).
+- **Deterministic domain rejection** (invalid transition, terminal-state command, version conflict): a *result*, not a failure. It commits durably (§8) and records a `FAILED` operation + history. The tenant is unchanged, and the rejection is observable and replayable.
+- **Transaction/infrastructure failure** (connection lost, serialization failure, infra-caused constraint error): *not* a durable outcome; the transaction rolls back, nothing is recorded ([04 §8]).
 
 **Classification is by semantic cause, never by the raw database error being thrown.** A unique/constraint violation is **not automatically an infrastructure failure**:
 
 - a duplicate idempotency key for the same tenant is absorbed by the idempotency lookup before insertion (§5.1) and does not reach a constraint on the normal path;
-- a violation that escapes the documented flow is a programmer or schema bug and must be surfaced as such — it is *not* classified as a transient infrastructure failure;
+- a violation that escapes the documented flow is a programmer or schema bug and must be surfaced as such; it is *not* classified as a transient infrastructure failure;
 - only genuine infra-caused errors (connection loss, serialization failure, a store-reported "could not complete work" error) roll back with nothing recorded.
 
 Phase 1, summarized:
@@ -257,7 +257,7 @@ Phase 1, summarized:
 A domain rejection is recorded as a `FAILED` operation *and* a history entry, in the same transaction, **but the tenant state transaction itself does not happen** (the tenant stays where it is). This means:
 
 - the caller sees a deterministic rejection that is durably observable and replays identically;
-- an operator inspecting the store sees "this was attempted, here is why it was refused" — never a silent no-op.
+- an operator inspecting the store sees "this was attempted, here is why it was refused", never a silent no-op.
 
 ### 7.3 Ambiguous outcome resolution (commit-result)
 
@@ -268,7 +268,7 @@ The ambiguity window in Phase 1 is: "the caller sent a transition and cannot tel
 
 ### 7.4 Retry policy
 
-**`OPEN DECISION`: retry policy** — whether the engine re-invokes a failed command itself (automatic) or requires an explicit caller re-command. A retry is always a **fresh command with the same `OperationId`**, because a transient failure left *nothing* recorded; once a committed result exists, idempotent replay takes over (§5.1, §5.2). Constraints: must terminate; must not retry deterministic rejections; must not retry blindly across a tenant version change; must be observable; must be crash-safe. Leases/heartbeats/takeover are **not** in Phase 1 ([02 §6]); the "stale worker" failure class therefore does not exist in Phase 1 — it becomes real only when out-of-transaction work does (Phase 3). Until then, the mechanism for an operator to resolve any Phase 1 in-transaction problem is: retry the command (crash-rollback guarantees make this safe — §8).
+**`OPEN DECISION`: retry policy**: whether the engine re-invokes a failed command itself (automatic) or requires an explicit caller re-command. A retry is always a **fresh command with the same `OperationId`**, because a transient failure left *nothing* recorded; once a committed result exists, idempotent replay takes over (§5.1, §5.2). Constraints: must terminate; must not retry deterministic rejections; must not retry blindly across a tenant version change; must be observable; must be crash-safe. Leases/heartbeats/takeover are **not** in Phase 1 ([02 §6]); the "stale worker" failure class therefore does not exist in Phase 1; it becomes real only when out-of-transaction work does (Phase 3). Until then, the mechanism for an operator to resolve any Phase 1 in-transaction problem is: retry the command (crash-rollback guarantees make this safe, per §8).
 
 ---
 
@@ -276,7 +276,7 @@ The ambiguity window in Phase 1 is: "the caller sent a transition and cannot tel
 
 ### 8.1 Phase 1 (now): everything transactional
 
-Phase 1 has **no external side effects**, so a command is **one atomic DB transaction**. Every terminal path either **commits a durable result** (replay, deterministic rejection, or success) or **rolls back** (infrastructure failure) — never anything in between.
+Phase 1 has **no external side effects**, so a command is **one atomic DB transaction**. Every terminal path either **commits a durable result** (replay, deterministic rejection, or success) or **rolls back** (infrastructure failure), never anything in between.
 
 ```text
 BEGIN
@@ -312,9 +312,9 @@ BEGIN
 
 The two special outcome classes, distinguished from the normal success path:
 
-1. **Domain rejection** (invalid transition, terminal-state command, version conflict): this is a **committed, durable `FAILED` or rejection record**, with the tenant unchanged. The transaction does **not** roll back the rejection — the rejection *is* the transaction's result.
+1. **Domain rejection** (invalid transition, terminal-state command, version conflict): this is a **committed, durable `FAILED` or rejection record**, with the tenant unchanged. The transaction does **not** roll back the rejection; the rejection *is* the transaction's result.
 
-2. **Transaction/infrastructure failure** (connection lost, serialization failure, infra-caused constraint error): the transaction **rolls back entirely** — nothing is recorded, not an operation row, not a history entry, no partial writes. This is crash-safety, not a recorded outcome ([04 §7], [04 §8]).
+2. **Transaction/infrastructure failure** (connection lost, serialization failure, infra-caused constraint error): the transaction **rolls back entirely**: nothing is recorded, not an operation row, not a history entry, no partial writes. This is crash-safety, not a recorded outcome ([04 §7], [04 §8]).
 
 The same-`OperationId` race (two concurrent commands using the same `(tenant_id, operation_id)`) is handled by the **after-CAS idempotency re-check**: exactly one wins the CAS, the other detects the winner's committed row and replays it, without ever colliding on the composite key. This makes the duplicate-command scenario safe without inventing any worker or claim machinery.
 
@@ -370,7 +370,7 @@ operation_history
   FOREIGN KEY (tenant_id, operation_id) REFERENCES operations(tenant_id, operation_id)
 ```
 
-- **`PRIMARY KEY (tenant_id, operation_id)` — an `OperationId` is unique *within* a tenant.** The same `OperationId` under different tenants is independent state, enforced by the composite key (criterion #12, probe #14). This is the Phase 1 idempotency mechanism: a `SUCCEEDED` operation replays; a duplicate insert for the same `(tenant_id, operation_id)` fails the PK constraint. **There is no per-tenant partial unique index over in-flight statuses in Phase 1** — that is Phase 3 exclusivity, not Phase 1 idempotency ([02 §4]).
+- **`PRIMARY KEY (tenant_id, operation_id)`**: an `OperationId` is unique *within* a tenant. The same `OperationId` under different tenants is independent state, enforced by the composite key (criterion #12, probe #14). This is the Phase 1 idempotency mechanism: a `SUCCEEDED` operation replays; a duplicate insert for the same `(tenant_id, operation_id)` fails the PK constraint. **There is no per-tenant partial unique index over in-flight statuses in Phase 1**. That is Phase 3 exclusivity, not Phase 1 idempotency ([02 §4]).
 - **Version CAS** is enforced as a real database operation (the `UPDATE ... WHERE version = $observed` guard). The application layer validates for good errors; the CAS is the source of truth for concurrency ([02 §3], [02 §4]).
 
 ### 9.2 Migration and test requirements
@@ -389,7 +389,7 @@ The core depends on interfaces, not a database ([02 §4]). Phase 1 requires at l
 
 | Capability | Semantic required | Why |
 | --- | --- | --- |
-| Atomic read-modify-write of a tenant + operation | Either the whole transition, the idempotent replay, or the deterministic rejection commits — atomically, never partially. A domain rejection (including CAS=0 → `VERSION_CONFLICT`) is a committed result (tenant unchanged, rejection recorded), *never* a blanket rollback and *never* a phantom void | crash safety, no partial transitions, observable rejections |
+| Atomic read-modify-write of a tenant + operation | Either the whole transition, the idempotent replay, or the deterministic rejection commits atomically, never partially. A domain rejection (including CAS=0 → `VERSION_CONFLICT`) is a committed result (tenant unchanged, rejection recorded), *never* a blanket rollback and *never* a phantom void | crash safety, no partial transitions, observable rejections |
 | Compare-and-swap on tenant version | A transition must fail (not silently succeed) if the version it observed is stale; the loser records a durable deterministic rejection | optimistic concurrency, no lost updates |
 | Durable operation records + history | Operations and outcomes (including deterministic rejections) persist; replay is possible | idempotency, audit |
 
@@ -409,9 +409,9 @@ Phase 1 is accepted when the following are demonstrated by tests against real Po
 4. A transaction rollback leaves no partial writes: tenant state and operation tables are consistent.
 5. A crash before commit leaves the tenant in its previous committed state.
 6. A crash after commit leaves the transition durable; replay returns the recorded success.
-7. A caller that times out after a successful commit re-sends the same `OperationId`; engine replays success — no double transition, no fabricated failure.
+7. A caller that times out after a successful commit re-sends the same `OperationId`; engine replays success, no double transition and no fabricated failure.
 8. A transient infrastructure failure (e.g., connection dropped, serialization failure) leaves no partial writes and no phantom operation/claim; everything rolls back.
-9. A deterministic rejection (invalid transition, terminal-state tampering, version conflict) is **durably recorded** as a `FAILED` operation + history, while the tenant state is **unchanged** — the operator can always see "this was attempted and refused, for this reason."
+9. A deterministic rejection (invalid transition, terminal-state tampering, version conflict) is **durably recorded** as a `FAILED` operation + history, while the tenant state is **unchanged**; the operator can always see "this was attempted and refused, for this reason."
 10. Version conflict on concurrent CAS: exactly one writer wins; the loser fails deterministically.
 11. Unrelated tenants never block each other; multi-tenant concurrency makes progress.
 12. Idempotency-key collision across tenants is safe: the same `OperationId` under different tenants are independent operations, enforced by `PRIMARY KEY (tenant_id, operation_id)`.
@@ -429,8 +429,8 @@ Each of the following has an explicit test ([04 §3]). Where semantics leave beh
 3. **Worker crashes after committing.** Transition durable; replayed command returns recorded success.
 4. **Transaction fails** (connection drop / serialization failure). No partial writes, no phantom submission; consistent snapshot.
 5. **Two workers operate on same tenant.** Version CAS: exactly one commits; the loser fails deterministically; second is rejected, not silently absorbed.
-6. **A stale worker resumes later.** The tenant version has moved since its observation; its CAS fails deterministically. There is no claim to take over in Phase 1 — a stale observation is a version conflict, not a takeover scenario.
-7. **Request times out but the operation actually succeeded.** Same `OperationId` retry → replay of success, not failure, not double-run. (Commit-result ambiguity — [§7.3].)
+6. **A stale worker resumes later.** The tenant version has moved since its observation; its CAS fails deterministically. There is no claim to take over in Phase 1; a stale observation is a version conflict, not a takeover scenario.
+7. **Request times out but the operation actually succeeded.** Same `OperationId` retry → replay of success, not failure, not double-run. (Commit-result ambiguity; see [§7.3].)
 8. **Process restarts.** Durable state recovered; no lost transitions; in-transaction crash = rollback (nothing committed is lost).
 9. **Database connection disappears mid-operation.** Transient failure classification; transaction rolls back; no corruption, no phantom writes.
 10. **Retry happens after state has already changed** (version mismatch). Deterministic CAS failure, no silent overwrite.
@@ -455,18 +455,18 @@ apps/playground   minimal host harness to exercise the engine against a local st
 
 ---
 
-## 14. Open decisions — consolidated
+## 14. Open decisions: consolidated
 
 | # | OPEN DECISION | Constraint to satisfy |
 | --- | --- | --- |
 | 1 | tenant id format / who generates | externally meaningful, immutable |
-| 2 | lifecycle state set (final) | **DECIDED (Phase 1): steady states only — `REQUIRES_SETUP`, `INITIALIZED`, `SUSPENDED`, `DELETED`.** In-flight states (`PROVISIONING`, `SUSPENDING`, `RESUMING`, `DELETING`) are the Phase 3 execution-model seam ([02 §6]), not Phase 1 states (§2.3, §2.4). |
+| 2 | lifecycle state set (final) | **DECIDED (Phase 1): steady states only**: `REQUIRES_SETUP`, `INITIALIZED`, `SUSPENDED`, `DELETED`. In-flight states (`PROVISIONING`, `SUSPENDING`, `RESUMING`, `DELETING`) are the Phase 3 execution-model seam ([02 §6]), not Phase 1 states (§2.3, §2.4). |
 | 3 | operation status taxonomy | **DECIDED (Phase 1): `SUCCEEDED`, `FAILED`.** Permanent-vs-transient is carried by the `Failure` classification (§7), not a status. `PROPOSED`/`PENDING`/`RUNNING` arrive with Phase 3 ([02 §6]). |
 | 4 | history model (per-attempt vs per-event; retention) | append-only, complete |
 | 5 | duplicate `createTenant` policy | idempotent |
 | 6 | transient-failure retry (auto vs explicit) | retry is a fresh command with the same `OperationId`; nothing durable is lost on infra failure (§7.1) |
-| 7 | rejection-path transaction shape | **DECIDED (Phase 1): a domain rejection — including a CAS version conflict — is recorded as `FAILED` + history in the *same* transaction and **committed** (§8.1); never a blanket rollback. Remaining open: how the storage port expresses it (#8).** |
-| 8 | storage interface shape | [02 §4], [02 §6] — no tx held across external I/O; must express the CAS-rejection path (CAS=0 → committed durable rejection or idempotent replay) distinctly from infrastructure rollback ([04 §2]) |
+| 7 | rejection-path transaction shape | **DECIDED (Phase 1): a domain rejection (including a CAS version conflict) is recorded as `FAILED` + history in the *same* transaction and **committed** (§8.1); never a blanket rollback. Remaining open: how the storage port expresses it (#8).** |
+| 8 | storage interface shape | [02 §4], [02 §6]; no tx held across external I/O; must express the CAS-rejection path (CAS=0 → committed durable rejection or idempotent replay) distinctly from infrastructure rollback ([04 §2]) |
 | 9 | whether CAS+tx suffice in Phase 1, or locking/SERIALIZABLE needed | no lost update, no lost transition, no lost rejection ([02 §8]) |
-| 10 | leases/heartbeats/takeover | **DECIDED: not in Phase 1** ([02 §6]) — required only with Phase 3 out-of-tx work |
+| 10 | leases/heartbeats/takeover | **DECIDED: not in Phase 1** ([02 §6]); required only with Phase 3 out-of-tx work |
 | 11 | failure outcome payload schemas | classified, JSON, language-neutral |
