@@ -18,7 +18,7 @@ Rules that govern every line of Tenqor code, every test, and every review. Each 
 
 **Rationale.** Unclassified failures make ambiguous outcomes unrecognizable.
 
-**Verified by.** Code review: every `catch` and every non-success path maps to a documented classification ([03 §9.1]) or is marked `OPEN DECISION`.
+**Verified by.** Code review: every `catch` and every non-success path maps to a documented classification ([03 §7.1]) or is marked `OPEN DECISION`.
 
 ## 3. No hidden retries
 
@@ -26,7 +26,7 @@ Rules that govern every line of Tenqor code, every test, and every review. Each 
 
 **Rationale.** Hidden retries convert deterministic failures into ambiguous outcomes and corrupt idempotency reasoning.
 
-**Verified by.** Grep-review for retry loops; each retry decision cites the policy ([03 §9.3]).
+**Verified by.** Grep-review for retry loops; each retry decision cites the policy ([03 §7.4]).
 
 ## 4. No global mutable state
 
@@ -54,7 +54,7 @@ Rules that govern every line of Tenqor code, every test, and every review. Each 
 
 ## 7. SQL behavior must be understood, not hidden
 
-**Rule.** Every concurrency-critical SQL statement (the CAS update, the partial unique index, the transaction boundaries) must be understandable by a reviewer, documented with its intent, and tested against real PostgreSQL. SQL is not a leak to be abstracted away; it is the contract.
+**Rule.** Every concurrency-critical SQL statement (the CAS update and the transaction boundaries) must be understandable by a reviewer, documented with its intent, and tested against real PostgreSQL. SQL is not a leak to be abstracted away; it is the contract.
 
 **Rationale.** The database enforces the invariants, not the ORM. Hiding SQL hides the mechanism that makes Tenqor correct.
 
@@ -70,7 +70,7 @@ Rules that govern every line of Tenqor code, every test, and every review. Each 
 
 ## 9. Every important invariant must be documented
 
-**Rule.** Invariants named in the docs (per-tenant exclusivity, version CAS, replay, terminal-finality, append-only history) are documented *where they are enforced* — next to the enforcement, in a comment tied to the doc section. Docs are the source of truth; comments point back to them.
+**Rule.** Invariants named in the docs (Phase 1: version CAS, replay, durable rejection, terminal-finality, append-only history — per-tenant exclusivity is a Phase 3 invariant, not a Phase 1 one) are documented *where they are enforced* — next to the enforcement, in a comment tied to the doc section. Docs are the source of truth; comments point back to them.
 
 **Rationale.** An invariant that survives only in a head is lost.
 

@@ -49,10 +49,20 @@ Tenqor's model is a **durable, versioned state machine** persisted in a transact
 
 - **durable** — a committed transition is never lost, even if the process that made it dies;
 - **idempotent** — re-delivering a command does not re-apply effects;
-- **exclusive** — at most one in-flight operation applies to a tenant at a time;
+- **serialized** — concurrent transition attempts for a tenant are serialized by the store; exactly one commits, the rest are rejected;
 - **versioned** — a transition is only applied against the state the caller actually observed.
 
 The database is the source of truth. In-memory state is a cache, never an authority.
+
+### 3.1 Two-tier model — avoid a false reading of "converge"
+
+The product goal (Section 2) is long-term. It distinguishes two very different things:
+
+> **Long-term Tenqor:** desired state → observed state → reconciliation → convergence (Phases 4–5).
+
+> **Phase 1:** explicit lifecycle commands → durable, transactional state transitions.
+
+Phase 1 is a **transactional command processor for tenant lifecycle state** — not a worker system and not a reconciliation engine. It has no desired state, no observed state, no scheduling, no claims or leases. It executes a command durably and records the outcome. The "converge" language must never be read as license to build any reconciliation machinery during Phase 1.
 
 ## 4. Scope
 

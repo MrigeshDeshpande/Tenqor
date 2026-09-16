@@ -69,10 +69,14 @@ The gap: **an application-grade, durable state machine for tenant lifecycle, wit
 
 > Declare what state a tenant's resources should be in; make the system reliably converge toward that state.
 
+"Converge" is the **long-term** ambition: it eventually means desired-state declaration and reconciliation (Phases 4–5). It must not be read as though Phase 1 already contains reconciliation machinery. Phase 1 delivers the durable substrate of convergence:
+
+> **Phase 1: explicit lifecycle commands → durable, transactional state transitions.**
+
 "Reliably" means: after any number of the failures in §2, an operator inspecting the store can always answer two questions without guessing:
 
 1. What is the current lifecycle state of this tenant? — **Always exact.**
-2. What operation is or was in progress, and what was its outcome? — **Always recorded.**
+2. For every command that commits, is its outcome recorded, including the outcome of rejected commands? — **Always recorded.**
 
 ## 5. Concrete examples from different domains
 
